@@ -21,6 +21,7 @@ public class CacheNodeService {
     public void delete(String key) {
         localCache.remove(key);
     }
+    //supplier string is a functional interface which have only one abstract function so that it can be implimented using lambda
     public String getOrFetch(String key, long ttlMillis, Supplier<String> databaseFallback) {
         String cachedValue = localCache.get(key);
         if (cachedValue != null) {
