@@ -40,6 +40,6 @@ public class CacheNodeController {
     public ResponseEntity<Void> delete(@PathVariable String key) {
         cacheNodeService.delete(key);
         System.out.println("Deleting key: " + key);
-        return ResponseEntity.ok().build(); // Returns 200 OK
+        return ResponseEntity.ok().build();
     }
 }
