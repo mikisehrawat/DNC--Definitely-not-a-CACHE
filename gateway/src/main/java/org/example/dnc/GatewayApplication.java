@@ -2,12 +2,13 @@ package org.example.dnc;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-public class DncApplication {
+@EnableScheduling
+public class GatewayApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(DncApplication.class, args);
+        SpringApplication.run(GatewayApplication.class, args);
     }
-
 }

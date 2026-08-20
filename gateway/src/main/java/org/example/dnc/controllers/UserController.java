@@ -21,15 +21,4 @@ public class UserController {
         return ResponseEntity.ok("User created successfully in database!");
     }
 
-    // 2. Get a user (Triggers the Cache-Aside logic)
-    @GetMapping("/{id}")
-    public ResponseEntity<String> getUser(@PathVariable String id) {
-        String data = userService.getUserData(id);
-
-        if (data == null) {
-            return ResponseEntity.notFound().build(); // 404 if not in Cache AND not in DB
-        }
-
-        return ResponseEntity.ok(data); // 200 OK
-    }
 }

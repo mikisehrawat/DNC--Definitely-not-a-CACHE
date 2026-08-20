@@ -25,13 +25,6 @@ public class GatewayController {
         this.userRepository = userRepository;
     }
 
-    @PostConstruct
-    public void initCluster() {
-        hashRouter.addNode("http://localhost:8081");
-        hashRouter.addNode("http://localhost:8082");
-        hashRouter.addNode("http://localhost:8083");
-    }
-
     @GetMapping("/users/{id}")
     public ResponseEntity<String> getUser(@PathVariable String id) {
         String targetNodeUrl = hashRouter.getRouteTarget(id);
