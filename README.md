@@ -71,12 +71,58 @@ If discussing this project in a System Design or SDE interview, highlight these 
 
 ## 🚀 How to Run the Project
 
-### Prerequisites
+### 1. Database Setup (PostgreSQL)
+Ensure your PostgreSQL database is running and has the following table created:
+```sql
+CREATE TABLE user_profiles (
+    user_id VARCHAR(255) PRIMARY KEY,
+    user_data TEXT
+);
+```
+
+### 2. Running with Docker (Recommended)
+You can effortlessly run the entire decoupled cluster without installing Java or Maven using Docker. 
+
+#### A. Starting the Cluster
+Download the `docker-compose.shared.yml` file and run:
+```bash
+docker-compose -f docker-compose.shared.yml up -d
+```
+
+#### B. Setting Environment Variables
+You can customize the cluster by editing the `environment:` sections inside the `docker-compose.shared.yml` file before running it, or by passing them directly in your terminal. 
+For example, to configure the Gateway's database connection dynamically:
+```bash
+DB_HOST=192.168.1.10 DB_USER=myuser DB_PASSWORD=mypass docker-compose -f docker-compose.shared.yml up -d
+```
+
+#### C. Adding Individual Nodes (Scaling)
+Because the Cache Nodes are completely stateless, you can spin up more nodes instantly. Docker will automatically network them, and the Gateway will discover them via heartbeats.
+```bash
+# Scale up to 3 Cache Nodes instantly!
+docker-compose -f docker-compose.shared.yml up -d --scale cachenode=3
+```
+
+#### D. Stopping a Particular Node
+To test fault tolerance (or perform maintenance), you can kill a specific node. 
+First, list your running containers to find the ID of the node you want to stop:
+```bash
+docker ps
+```
+Then, gracefully stop it:
+```bash
+docker stop <container_id>
+```
+The Gateway will detect the missed heartbeats within 15 seconds and automatically evict the node from the Hash Ring, gracefully routing traffic to the remaining healthy nodes!
+
+### 3. Running from Source (Local Development)
+
+#### Prerequisites
 - **Java 17+**
 - **Maven**
 - **PostgreSQL** running locally (or adjust credentials in `gateway/src/main/resources/application.properties`).
 
-### 1. Start the Gateway
+#### Start the Gateway
 Open a terminal and navigate to the `gateway` directory:
 ```bash
 cd gateway
