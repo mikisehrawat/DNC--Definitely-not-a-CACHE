@@ -1,11 +1,11 @@
-package org.example.dnc.entity;
+package org.example.dnc.node.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "user_profiles") // Good practice to explicitly name your tables
+@Table(name = "Cache")
 public class UserProfile {
 
     @Id

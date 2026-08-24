@@ -12,23 +12,24 @@ The system is decoupled into two primary microservices: the **Gateway** and the 
 1. **Gateway Service (API Gateway & Router)**
    - Acts as the entry point for all client requests.
    - Manages the **Hash Ring** (using Consistent Hashing) to distribute keys across the available cache nodes.
-   - Responsible for fetching data from the persistent storage (Database) on a cache miss, and writing it back to the respective cache node (**Cache-Aside Pattern**).
+   - Acts as a pure proxy that routes requests to the appropriate Cache Node without any direct database knowledge.
    - Manages the cluster state by tracking heartbeats from Cache Nodes. If a node fails, it is evicted from the hash ring.
 
 2. **Cache Node Service (Data Node)**
    - Responsible for storing the actual Key-Value pairs in memory.
+   - Responsible for fetching data from the persistent storage (Database) on a cache miss, and caching it locally (**Cache-Aside Pattern**).
    - Implements a custom, thread-safe **Least Recently Used (LRU) Cache**.
    - Sends periodic heartbeats (pings) to the Gateway to announce its availability.
    - Supports Time-To-Live (TTL) expiration for cached items.
 
 3. **Database (PostgreSQL)**
-   - The persistent source of truth. When data is not in the cache, the Gateway fetches it from here.
+   - The persistent source of truth. When data is not in the cache, the Cache Node fetches it from here.
 
 ### Request Flow
 - **GET Request**: Client requests `GET /api/v1/gateway/users/{id}`.
 - **Hash Computation**: Gateway hashes the `{id}` using MD5 and finds the target Cache Node on the Hash Ring.
 - **Cache Hit**: If the node has the data, it returns it instantly (O(1)).
-- **Cache Miss**: Gateway receives a 404, queries the PostgreSQL Database, receives the data, updates the Cache Node via a `PUT` request, and returns the data to the client.
+- **Cache Miss**: The Cache Node checks its memory, finds nothing, queries the PostgreSQL Database, caches the data locally, and returns it. The Gateway transparently passes this data to the client.
 
 ---
 
@@ -65,7 +66,7 @@ If discussing this project in a System Design or SDE interview, highlight these 
 3. **Concurrency in the LRU Cache**:
    - Mention why you didn't just use `Collections.synchronizedMap()`. Using fine-grained locking (`ReentrantLock`) only on the Linked List manipulation prevents read-heavy workloads from blocking each other.
 4. **Cache Miss Strategy (Cache-Aside)**:
-   - Discuss how the Gateway prevents the cache nodes from needing direct database access, effectively separating concerns.
+   - Discuss how the Cache Node manages both the in-memory LRU cache and persistent storage fallback, ensuring the Gateway remains a lightweight, stateless router.
 
 ---
 
@@ -74,7 +75,7 @@ If discussing this project in a System Design or SDE interview, highlight these 
 ### 1. Database Setup (PostgreSQL)
 Ensure your PostgreSQL database is running and has the following table created:
 ```sql
-CREATE TABLE user_profiles (
+CREATE TABLE "Cache" (
     user_id VARCHAR(255) PRIMARY KEY,
     user_data TEXT
 );
@@ -84,14 +85,29 @@ CREATE TABLE user_profiles (
 You can effortlessly run the entire decoupled cluster without installing Java or Maven using Docker. 
 
 #### A. Starting the Cluster
-Download the `docker-compose.shared.yml` file and run:
+
+To start the Gateway service exclusively:
 ```bash
-docker-compose -f docker-compose.shared.yml up -d
+docker-compose -f docker-compose.shared.yml up -d --no-deps gateway
+```
+
+To start individual Cache Node instances, use the following commands. Note that we set the advertised host to `host.docker.internal` so the Gateway can route to them successfully across Docker networks:
+
+**Node 1 (Port 8081):**
+```bash
+# In PowerShell:
+$env:NODE_ADVERTISED_HOST="host.docker.internal"; docker-compose -f docker-compose.shared.yml run -d -p 8081:8081 cachenode
+```
+
+**Node 2 (Port 8082):**
+```bash
+# In PowerShell:
+$env:NODE_ADVERTISED_HOST="host.docker.internal"; docker-compose -f docker-compose.shared.yml run -d -p 8082:8082 -e PORT="8082" cachenode
 ```
 
 #### B. Setting Environment Variables
 You can customize the cluster by editing the `environment:` sections inside the `docker-compose.shared.yml` file before running it, or by passing them directly in your terminal. 
-For example, to configure the Gateway's database connection dynamically:
+For example, to configure the Cache Node's database connection dynamically:
 ```bash
 DB_HOST=192.168.1.10 DB_USER=myuser DB_PASSWORD=mypass docker-compose -f docker-compose.shared.yml up -d
 ```
@@ -120,7 +136,7 @@ The Gateway will detect the missed heartbeats within 15 seconds and automaticall
 #### Prerequisites
 - **Java 17+**
 - **Maven**
-- **PostgreSQL** running locally (or adjust credentials in `gateway/src/main/resources/application.properties`).
+- **PostgreSQL** running locally (or adjust credentials in `cachenode/src/main/resources/application.properties`).
 
 #### Start the Gateway
 Open a terminal and navigate to the `gateway` directory:
@@ -158,4 +174,4 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
    - Kill one of the Cache Node terminals (`Ctrl+C`).
    - Wait 15 seconds.
    - You will see the Gateway log: `Node evicted due to missed heartbeats`.
-   - Make the `curl` request again. The Gateway will gracefully re-route the request to the remaining node, fetch it from the DB (cache miss), and populate the new node.
+   - Make the `curl` request again. The Gateway will gracefully re-route the request to the remaining node, which will fetch it from the DB (cache miss) and cache it.

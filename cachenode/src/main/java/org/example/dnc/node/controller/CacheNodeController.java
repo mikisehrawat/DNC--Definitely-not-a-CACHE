@@ -43,3 +43,20 @@ public class CacheNodeController {
         return ResponseEntity.ok().build();
     }
 }
+
+@RestController
+@RequestMapping("/api/v1/users")
+class UserNodeController {
+
+    private final CacheNodeService cacheNodeService;
+
+    public UserNodeController(CacheNodeService cacheNodeService) {
+        this.cacheNodeService = cacheNodeService;
+    }
+
+    @PostMapping
+    public ResponseEntity<String> createUser(@RequestParam String id, @RequestParam String data) {
+        cacheNodeService.createUser(id, data);
+        return ResponseEntity.ok("User created successfully in database via node!");
+    }
+}

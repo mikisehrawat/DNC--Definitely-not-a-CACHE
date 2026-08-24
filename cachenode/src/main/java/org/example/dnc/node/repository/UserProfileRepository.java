@@ -1,6 +1,6 @@
-package org.example.dnc.repository;
+package org.example.dnc.node.repository;
 
-import org.example.dnc.entity.UserProfile;
+import org.example.dnc.node.entity.UserProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

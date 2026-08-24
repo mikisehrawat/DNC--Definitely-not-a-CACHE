@@ -5,12 +5,6 @@ services:
     image: sehrawatmiki/dnc-gateway:latest
     ports:
       - "8080:8080"
-    environment:
-      - DB_HOST=host.docker.internal
-      - DB_PORT=5432
-      - DB_NAME=cache1
-      - DB_USER=postgres
-      - DB_PASSWORD=admin
     depends_on:
       - cachenode
 
@@ -18,3 +12,9 @@ services:
     image: sehrawatmiki/dnc-cachenode:latest
     environment:
       - GATEWAY_URL=http://gateway:8080
+      - NODE_ADVERTISED_HOST=
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_NAME=CacheTest
+      - DB_USER=postgres
+      - DB_PASSWORD=Miki.234

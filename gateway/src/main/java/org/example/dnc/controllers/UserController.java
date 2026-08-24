@@ -1,24 +1,30 @@
-package org.example.dnc.controller;
+package org.example.dnc.controllers;
 
-import org.example.dnc.service.UserService;
+import org.example.dnc.controllers.ConsistentHashRouter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
 
-    private final UserService userService;
+    private final ConsistentHashRouter hashRouter;
+    private final RestTemplate restTemplate;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
+    public UserController(ConsistentHashRouter hashRouter, RestTemplate restTemplate) {
+        this.hashRouter = hashRouter;
+        this.restTemplate = restTemplate;
     }
 
-    // 1. Create a user (Saves to DB only)
+    // 1. Route create user to appropriate node
     @PostMapping
     public ResponseEntity<String> createUser(@RequestParam String id, @RequestParam String data) {
-        userService.createUser(id, data);
-        return ResponseEntity.ok("User created successfully in database!");
+        String targetNodeUrl = hashRouter.getRouteTarget(id);
+        String createUrl = targetNodeUrl + "/api/v1/users?id=" + id + "&data=" + data;
+        
+        System.out.println("Routing create user request for '" + id + "' to Node: " + targetNodeUrl);
+        ResponseEntity<String> response = restTemplate.postForEntity(createUrl, null, String.class);
+        return response;
     }
-
 }
